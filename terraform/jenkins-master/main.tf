@@ -25,6 +25,22 @@ data "template_cloudinit_config" "jenkins-master" {
   }
 }
 
+data "template_cloudinit_config" "jenkins-private" {
+  gzip          = true
+  base64_encode = true
+
+  part {
+    content_type = "text/cloud-config"
+    content = templatefile("${path.module}/cloud-init.tpl",
+      {
+        jenkins_master_dns  = var.private_dns_name
+        location            = var.location
+        oeadmin_ssh_pub_key = file(var.oeadmin_ssh_pub_key)
+      }
+    )
+  }
+}
+
 module "jenkins-master" {
   source              = "../modules/terraform-azurerm-compute"
   location            = var.location
@@ -35,6 +51,43 @@ module "jenkins-master" {
   vnet_subnet_id      = element(module.network.vnet_subnets, 0)
   resource_group_name = var.resource_group_name
   custom_data         = data.template_cloudinit_config.jenkins-master.rendered
+  data_disk           = true
+  data_disk_size_gb   = 200
+  security_group_predefined_rules = [
+    {
+      name     = "SSH"
+      priority = "500"
+    },
+    {
+      name     = "HTTPS"
+      priority = "100"
+    },
+    {
+      name     = "HTTP"
+      priority = "200"
+    },
+  ]
+  security_group_custom_rules = [{
+    name                   = "jnlp"
+    priority               = "300"
+    direction              = "Inbound"
+    access                 = "Allow"
+    protocol               = "tcp"
+    destination_port_range = "50000"
+    description            = "Jenkins_JNLP"
+  }]
+}
+
+module "jenkins-private" {
+  source              = "../modules/terraform-azurerm-compute"
+  location            = var.location
+  vm_os_simple        = "UbuntuServer"
+  nb_public_ip       = 0
+  vm_hostname         = "jenkins-dev"
+  vm_size             = var.vm_size
+  vnet_subnet_id      = element(module.network.vnet_subnets, 0)
+  resource_group_name = var.resource_group_name
+  custom_data         = data.template_cloudinit_config.jenkins-private.rendered
   data_disk           = true
   data_disk_size_gb   = 200
   security_group_predefined_rules = [

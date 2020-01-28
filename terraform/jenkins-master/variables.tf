@@ -8,6 +8,11 @@ variable "dns_name" {
   default     = "oe-jenkins-tf"
 }
 
+variable "private_dns_name" {
+  description = "Jenkins Master DNS name"
+  default     = "oe-jenkins-dev"
+}
+
 variable "location" {
   description = "The location/region where the core network will be created. The full list of Azure regions can be found at https://azure.microsoft.com/regions"
   default     = "westeurope"
