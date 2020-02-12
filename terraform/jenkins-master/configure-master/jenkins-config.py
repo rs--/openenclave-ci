@@ -1,7 +1,6 @@
 import yaml
 import os
 
-
 def agenttemplate(template_name, label, image_name, vm_size, os_type, executor_count=1):
     return {
         "agentLaunchMethod": "SSH",
@@ -14,7 +13,7 @@ def agenttemplate(template_name, label, image_name, vm_size, os_type, executor_c
         "executeInitScriptAsRoot": True,
         "existingStorageAccountName": os.environ['STORAGE_ACCOUNT_NAME'],
         "imageReference": {
-            "id": os.environ['IMAGE_PREFIX'] + image_name
+            "id": os.environ['AGENTS_IMAGE_PREFIX'] + image_name
         },
         "imageTopLevelType": "advanced",
         "initScript": "gpasswd -a oeadmin docker \n chmod g+rw /var/run/docker.sock" if os_type is "Linux" else "",
@@ -23,7 +22,7 @@ def agenttemplate(template_name, label, image_name, vm_size, os_type, executor_c
         "installMaven": False,
         "jvmOptions": "-Dhudson.TcpSlaveAgentListener.hostName=" + os.environ['JENKINS_PRIVATE_IP'],
         "labels": label,
-        "location": os.environ['LOCATION'],
+        "location": os.environ['AGENTS_LOCATION'],
         "noOfParallelJobs": executor_count,
         "osDiskSize": 0 if os_type is "Linux" else 200,
         "osType": os_type,
@@ -110,8 +109,7 @@ try:
             agenttemplate("accwin2016", "SGXFLC-Windows", "terraform-win2016", "Standard_DC4s", "Windows"),
             agenttemplate("accwin2016dcap", "SGXFLC-Windows-DCAP", "terraform-win2016-dcap", "Standard_DC4s",
                           "Windows"),
-            agenttemplate("winnonsgx", "nonSGX-Windows", "terraform-win2016-nonSGXdcap", "Standard_F8s_v2", "Windows",
-                          4),
+            agenttemplate("winnonsgx", "nonSGX-Windows", "terraform-win2016-nonSGXdcap", "Standard_F8s_v2", "Windows"),
         ]
     }
 
@@ -124,7 +122,7 @@ try:
                             os.environ['STORAGE_NAME_WESTEUROPE'], os.environ['STORAGE_KEY_WESTEUROPE']),
         azureStorageAccount("oe_jenkins_storage_account",
                             "The storage account from the OE-Jenkins-CI resource group (in the OSTC Lab subscription)",
-                            os.environ['STORAGE_NAME'], os.environ['STORAGE_KEY']),
+                            os.environ['STORAGE_NAME_EASTUS'], os.environ['STORAGE_KEY_EASTUS']),
         usernamePassword("oeadmin-credentials", "Jenkins user password", "oeadmin",
                          "{AQAAABAAAAAgXsGuIKfm8KgMmZrJfOCL300GNJ7NQ5s9OuPp60M5SG4i0iasMrAjWE9whQgaJ3VO}"),
         usernamePassword("oe-ci", "", "oe-ci",
@@ -152,85 +150,19 @@ try:
             }
         },
         "jenkins": {
-            "agentProtocols": [
-              "JNLP4-connect",
-              "Ping"
-            ],
-            "authorizationStrategy": {
-                "loggedInUsersCanDoAnything" : {
-                    "allowAnonymousRead": False
-                }
-            },
             "clouds": [
                 {
                     "azureVM": accAzureVM
                 }
             ],
-            "crumbIssuer": {
-                "standard": {
-                    "excludeClientIPFromCrumb": False
-                }
-            },
-            "disableRememberMe": False,
-            "markupFormatter": "plainText",
-            "mode": "NORMAL",
-            "myViewsTabBar": "standard",
             "numExecutors": 2,
-            "primaryView": {
-                "all": {
-                    "name": "all"
-                }
-            },
-            "projectNamingStrategy": "standard",
-            "quietPeriod": 5,
-            "remotingSecurity": {
-                "enabled": True
-            },
-            "scmCheckoutRetryCount": 0,
-            "securityRealm": {
-                "local": {
-                    "allowsSignup": False,
-                    "enableCaptcha": False,
-                    "users": [
-                        { "id": "oeadmin"}
-                    ]
-                }
-            },
-            "slaveAgentPort": 50000,
-            "updateCenter": {
-                "sites" : [
-                    {
-                        "id": "default",
-                        "url": "https://updates.jenkins.io/update-center.json"
-                    }
-                ]
-            }
-        },
-        "security": {
-            "apiToken": {
-                "creationOfLegacyTokenEnabled": False,
-                "tokenGenerationOnCreationEnabled": False,
-                "usageStatisticsEnabled": True
-            },
-            "sSHD": {
-                "port": -1
-            }
         },
         "unclassified": {
-            "appInsightsGlobalConfig": {
-                "appInsightsEnabled": True
-            },
-            "githubPullRequests": {
-                "actualiseOnFactory": False
-            },
-            "gitHubPluginConfig": {
-                "hookUrl": os.environ['JENKINS_URL'] + "/github-webhook/"
-            },
             "globalLibraries": {
                 "libraries": [
                     {
                         "allowVersionOverride": False,
-                        "defaultVersion": "terraform",
+                        "defaultVersion": "master",
                         "name": "OpenEnclaveCommon",
                         "retriever": {
                             "modernSCM": {
@@ -272,21 +204,6 @@ try:
             "location": {
                 "adminAddress": "oeciteam@microsoft.com",
                 "url": os.environ['JENKINS_URL']
-            },
-            "mailer": {
-                "charset": "UTF-8",
-                "useSSL": False
-            },
-            "pollSCM": {
-                "pollingThreadCount": 10
-            },
-            "timestamperConfig": {
-                "allPipelines": False,
-                "elapsedTimeFormat": "'<b>'HH:mm:ss.S'</b> '",
-                "systemTimeFormat": "'<b>'HH:mm:ss'</b> '"
-            },
-            "upstream": {
-                "globalUpstreamFilterStrategy": "UseOldest"
             }
         },
         "tool": {
