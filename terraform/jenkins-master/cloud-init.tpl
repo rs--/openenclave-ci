@@ -1,15 +1,15 @@
 #cloud-config
 disk_setup:
-  /dev/sdc:
-    layout: true
-    overwrite: false
-    table_type: 'mbr'
+  /dev/disk/azure/scsi1/lun0:
+      table_type: gpt
+      layout: True
+      overwrite: True
 fs_setup:
-  - label: jenkins_home
-    device: /dev/sdc0
-    filesystem: ext4
+    - device: /dev/disk/azure/scsi1/lun0
+      partition: 1
+      filesystem: ext4
 mounts:
-  - [ "/dev/sdc", "/var/jenkins_home" ]
+    - ["/dev/disk/azure/scsi1/lun0-part1", "/var/jenkins_home", auto, "defaults,noexec,nofail"]
 
 groups:
   - docker
@@ -44,7 +44,7 @@ write_files:
       Type=simple
       Restart=always
       TimeoutStartSec=60
-      ExecStartPre=/usr/bin/docker pull jenkinsci/blueocean
+      ExecStartPre=/usr/bin/docker pull jenkins/jenkins:lts
       ExecStartPre=-/usr/bin/docker rm -f %p
       ExecStart=/usr/bin/docker run \
         --name %p \
@@ -52,7 +52,7 @@ write_files:
         -v /var/jenkins_home:/var/jenkins_home  \
         -e JAVA_OPTS="-Djava.awt.headless=true -Dmail.smtp.starttls.enable=true" \
         --user root -p 8080:8080 -p 50000:50000 \
-        jenkinsci/blueocean:latest
+        jenkins/jenkins:lts
       ExecStop=/usr/bin/docker stop %p
 
       [Install]
@@ -94,6 +94,7 @@ write_files:
           }
       }
 
+
 apt:
   preserve_sources_list: true
   sources:
@@ -115,9 +116,9 @@ packages:
   - software-properties-common
   - nginx
   - python-certbot-nginx
+  - unzip
 
 runcmd:
-
   - [ systemctl, daemon-reload ]
   - [ systemctl, enable, nginx.service ]
   - [ systemctl, start, nginx.service ]
@@ -126,5 +127,6 @@ runcmd:
   - [ certbot, --nginx, -d, ${jenkins_master_dns}.${location}.cloudapp.azure.com, --non-interactive, --agree-tos, -m, oeciteam@microsoft.com  ]
   - [ ln, -sfn, /etc/nginx/sites-available/jenkins, /etc/nginx/sites-available/default ]
   - [ systemctl, restart, nginx.service ]
+  - [ docker, exec, -ti, jenkins, /usr/loca/bin/install-plugins.sh < /var/jenkins_home/plugins.txt]
 
 final_message: "Jenkins Master is finally up, after $UPTIME seconds"
