@@ -51,15 +51,6 @@ module "jenkins-master" {
       priority = "200"
     },
   ]
-  security_group_custom_rules = [{
-    name                   = "jnlp"
-    priority               = "300"
-    direction              = "Inbound"
-    access                 = "Allow"
-    protocol               = "tcp"
-    destination_port_range = "50000"
-    description            = "Jenkins_JNLP"
-  }]
 }
 
 resource "azurerm_storage_account" "agents" {
