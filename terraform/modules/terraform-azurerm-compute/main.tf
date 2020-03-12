@@ -259,7 +259,7 @@ module "network-security-group" {
   source              = "Azure/network-security-group/azurerm"
   resource_group_name = azurerm_resource_group.vm.name
   location            = azurerm_resource_group.vm.location
-  security_group_name = "${var.vm_hostname}-${coalesce(var.remote_port, module.os.calculated_remote_port)}-nsg"
+  security_group_name = "${var.vm_hostname}-nsg"
   predefined_rules = var.security_group_predefined_rules
   custom_rules     = var.security_group_custom_rules
   tags = var.tags

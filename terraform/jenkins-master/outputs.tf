@@ -24,7 +24,7 @@ output "vnet_subnets" {
 }
 
 output "resource_group_name" {
-  value = var.resource_group_name
+  value = "${var.resource_group_name}-${terraform.workspace}"
 }
 
 output "jenkins_master_dns" {
