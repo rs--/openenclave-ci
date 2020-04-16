@@ -129,13 +129,27 @@ def WinCompilePackageTest(String dirName, String buildType, String hasQuoteProvi
     checkout scm
     dir(dirName) {
         bat """
+            echo "starting bat ${dirName} ${buildType}" && \
             vcvars64.bat x64 && \
             cmake.exe ${WORKSPACE} -G Ninja -DCMAKE_BUILD_TYPE=${buildType} -DBUILD_ENCLAVES=ON -DHAS_QUOTE_PROVIDER=${hasQuoteProvider} -DLVI_MITIGATION=${lviMitigation} -DLVI_MITIGATION_SKIP_TESTS=${lviMitigationSkipTests} -DNUGET_PACKAGE_PATH=C:/oe_prereqs -DCPACK_GENERATOR=NuGet -Wdev && \
             ninja.exe && \
             ctest.exe -V -C ${buildType} --timeout ${timeoutSeconds} && \
+            move openenclave\\bin\\*.dll openenclave\\lib\\ && \
             cpack.exe -D CPACK_NUGET_COMPONENT_INSTALL=ON -DCPACK_COMPONENTS_ALL=OEHOSTVERIFY && \
             cpack.exe && \
             (if exist C:\\oe rmdir /s/q C:\\oe) && \
+            echo "oe_prereqs directory" && \
+            dir C:\\oe_prereqs && \
+            echo "current directory" && \
+            dir && \
+            echo "openenclave dir" && \
+            dir openenclave && \
+            echo "openenclave.bin dir" && \
+            dir openenclave\\bin && \
+            echo "openenclave.lib dir" && \
+            dir openenclave\\lib && \
+            echo "openenclave.lib.openenclave dir" && \
+            dir openenclave\\lib\\openenclave && \
             nuget.exe install open-enclave -Source %cd% -OutputDirectory C:\\oe -ExcludeVersion && \
             set CMAKE_PREFIX_PATH=C:\\oe\\open-enclave\\openenclave\\lib\\openenclave\\cmake && \
             cd C:\\oe\\open-enclave\\openenclave\\share\\openenclave\\samples && \
