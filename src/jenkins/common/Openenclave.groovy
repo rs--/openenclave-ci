@@ -128,18 +128,41 @@ def WinCompilePackageTest(String dirName, String buildType, String hasQuoteProvi
     cleanWs()
     checkout scm
     dir(dirName) {
+
+        date = new Date()
+        commit = env.GIT_COMMIT?: "unknown_commit"
+        build = env.BUILD_NUMBER?: "unknown_build"
+
+        event="[ {'id': 'jenkins-${commit}-${build}-${buildType}', 'eventType': 'jenkins', 'subject': 'Jenkins Windows Build','eventTime':'${date.format("YYYY-MM-dd HH:mm:ss.SSSS")}','data':{'function':'WinCompilePackageTest','arguments':{'dirName':'${dirName}','buildType':'${buildType}','hasQuoteProvider':'${hasQuoteProvider}','timeoutSeconds':'${timeoutSeconds}','lviMitigation':'${lviMitigation}', 'lviMitigationSkipTests':'${lviMitigationSkipTests}'}}} ]"
+
+
         bat """
+            curl -X POST -H "aeg-sas-key:ANxkKhdcQHnmszmN/ShtvCQdPWI2G2I0wy7Y8FTHWIk=" -d "${event}" "https://rosan-dev-jenkins-event-topic.westus2-1.eventgrid.azure.net/api/events" && \
+            echo "BAT FILE STARTING - ${WORKSPACE}" && \
             vcvars64.bat x64 && \
             cmake.exe ${WORKSPACE} -G Ninja -DCMAKE_BUILD_TYPE=${buildType} -DBUILD_ENCLAVES=ON -DHAS_QUOTE_PROVIDER=${hasQuoteProvider} -DLVI_MITIGATION=${lviMitigation} -DLVI_MITIGATION_SKIP_TESTS=${lviMitigationSkipTests} -DNUGET_PACKAGE_PATH=C:/oe_prereqs -DCPACK_GENERATOR=NuGet -Wdev && \
             ninja.exe && \
+            echo "BAT FILE - CURRENT DIR 1" && \
+            dir && \
+            echo "BAT FILE - RUNNING CTEST" && \
             ctest.exe -V -C ${buildType} --timeout ${timeoutSeconds} && \
+            echo "BAT FILE - RUNNING CPACK 1" && \
             cpack.exe -D CPACK_NUGET_COMPONENT_INSTALL=ON -DCPACK_COMPONENTS_ALL=OEHOSTVERIFY && \
+            echo "BAT FILE - RUNNING CPACK 2" && \
             cpack.exe && \
+            echo "BAT FILE - CURRENT DIR 2" && \
+            dir && \
+            echo "BAT FILE - CURRENT DIR (oe_prereqs)" && \
+            dir "C:\\oe_prereqs" && \
+            echo "BAT FILE - RUNNING NUGET" && \
             (if exist C:\\oe rmdir /s/q C:\\oe) && \
             nuget.exe install open-enclave -Source %cd% -OutputDirectory C:\\oe -ExcludeVersion && \
             set CMAKE_PREFIX_PATH=C:\\oe\\open-enclave\\openenclave\\lib\\openenclave\\cmake && \
             cd C:\\oe\\open-enclave\\openenclave\\share\\openenclave\\samples && \
+            echo "BAT FILE - CURRENT DIR 3" && \
+            dir && \
             setlocal enabledelayedexpansion && \
+            echo "BAT FILE - RUNNING SAMPLES" && \
             for /d %%i in (*) do (
                 cd C:\\oe\\open-enclave\\openenclave\\share\\openenclave\\samples\\"%%i"
                 mkdir build
@@ -147,7 +170,8 @@ def WinCompilePackageTest(String dirName, String buildType, String hasQuoteProvi
                 cmake .. -G Ninja -DNUGET_PACKAGE_PATH=C:\\oe_prereqs -DLVI_MITIGATION=${lviMitigation} || exit /b %errorlevel%
                 ninja || exit /b %errorlevel%
                 ninja run || exit /b %errorlevel%
-            )
+            ) && \
+            echo "BAT FILE COMPLETED"
             """
     }
 }
